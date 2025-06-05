@@ -5,21 +5,24 @@ using System.Text;
 using System.Threading.Tasks;
 using BulkyBook.DataAccess.Data;
 using BulkyBook.DataAccess.Repository.IRepository;
-using BulkyBook.Models;
 
 namespace BulkyBook.DataAccess.Repository
 {
-    public class CategoryRepository : Repository<Category>, ICategoryRepository
+    public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _db;
-        public CategoryRepository(ApplicationDbContext db) : base(db)
+        public ICategoryRepository CategoryRepository { get; private set; }
+
+
+        public UnitOfWork(ApplicationDbContext db)
         {
             _db = db;
+            CategoryRepository = new CategoryRepository(_db);
         }
 
-        public void Update(Category obj)
+        public void Save()
         {
-            _db.Categories.Update(obj);
+            _db.SaveChanges();
         }
     }
 }
