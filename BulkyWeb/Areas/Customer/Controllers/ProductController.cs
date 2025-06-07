@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BulkyBookWeb.Areas.Customer.Controllers
 {
-    [Area("Admin")]
+    [Area("Customer")]
     public class ProductController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
