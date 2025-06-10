@@ -38,7 +38,7 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
                     Value = i.Id.ToString()
                 })
             };
-            if(id==null || id == 9)
+            if(id==null || id == 0)
             {
                 //create (insert)
                 return View(productVM);
