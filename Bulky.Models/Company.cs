@@ -10,7 +10,7 @@ namespace BulkyBook.Models
     public class Company
     {
         [Key]
-        int Id { get; set; }
+        public int Id { get; set; }
         [Required]
         public string Name { get; set; }
         public string StreetAddress { get; set; }
