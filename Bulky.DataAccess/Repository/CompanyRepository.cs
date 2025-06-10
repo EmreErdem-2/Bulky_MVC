@@ -24,3 +24,4 @@ namespace BulkyBook.DataAccess.Repository
 
 
     }
+}
