@@ -1,10 +1,16 @@
 ﻿using System.Security.Claims;
+using Azure;
+using Azure.Core;
 using BulkyBook.DataAccess.Repository.IRepository;
 using BulkyBook.Models;
 using BulkyBook.Models.ViewModels;
 using BulkyBook.Utility;
+using Iyzipay;
+using Iyzipay.Model;
+using Iyzipay.Request;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace BulkyBookWeb.Areas.Customer.Controllers
 {
@@ -13,12 +19,15 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
     public class CartController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IOptions<IyzicoSettings> _iyzicoSettings;
         [BindProperty]
         public ShoppingCartVM ShoppingCartVM { get; set; }
+        public Guid conversationId { get; set; }
 
-        public CartController(IUnitOfWork unitOfWork)
+        public CartController(IUnitOfWork unitOfWork, IOptions<IyzicoSettings> iyzicoSettings)
         {
             _unitOfWork = unitOfWork;
+            _iyzicoSettings = iyzicoSettings;
         }
 
         public IActionResult Index()
@@ -88,7 +97,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
 
         [HttpPost]
         [ActionName("Summary")]
-        public IActionResult SummaryPOST() // Gets ShoppingCartVM from the Bind Property above
+        public async Task<IActionResult> SummaryPOST() // Gets ShoppingCartVM from the Bind Property above
         {
             var claimsIdentity = (ClaimsIdentity)User.Identity;
             var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
@@ -126,6 +135,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
                 ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayedPayment;
                 ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusApproved;
             }
+            
             _unitOfWork.OrderHeader.Add(ShoppingCartVM.OrderHeader);
             _unitOfWork.Save();
             foreach(var cartItem in ShoppingCartVM.ShoppingCartList)
@@ -148,15 +158,58 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
                 ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusPending;
             }
 
+            conversationId = Guid.NewGuid();
 
-            return RedirectToAction(nameof(OrderConfirmation), new {id=ShoppingCartVM.OrderHeader.Id} );
+            IyzicoCheckoutVM checkoutVM = new IyzicoCheckoutVM {
+                Options = IyzicoOptionsSet(), 
+                CheckoutFormRequest = IyzicoPaymentSet(ShoppingCartVM)
+            };
+            CheckoutFormInitialize checkoutFormResponse = 
+                await CheckoutFormInitialize.Create(checkoutVM.CheckoutFormRequest, checkoutVM.Options);
+
+            ShoppingCartVM.OrderHeader.PaymentIntentId = checkoutVM.CheckoutFormRequest.ConversationId;
+            ShoppingCartVM.OrderHeader.Token = checkoutFormResponse.Token;
+            ShoppingCartVM.OrderHeader.TokenExpireTime = checkoutFormResponse.TokenExpireTime;
+            _unitOfWork.OrderHeader.Update(ShoppingCartVM.OrderHeader);
+            _unitOfWork.Save();
+
+            return View("IyzicoPayment", checkoutFormResponse);
         }
 
-        public IActionResult OrderConfirmation(int id)
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult OrderConfirmation([FromRoute]string id, [FromForm]string token)
         {
-            return View(id);
-        }
+            Iyzipay.Options options = IyzicoOptionsSet();
+            var orderHeader = _unitOfWork.OrderHeader.Get(u => u.Id.ToString() == id);
+            var storedToken = orderHeader.Token;
 
+            RetrieveCheckoutFormRequest request = new RetrieveCheckoutFormRequest
+            {
+                Locale = Locale.TR.ToString(),
+                ConversationId = orderHeader.PaymentIntentId,
+                Token = storedToken
+            };
+
+            CheckoutForm checkoutForm = CheckoutForm.Retrieve(request, options).Result;
+
+            if (checkoutForm.PaymentStatus == "SUCCESS" && token == storedToken)
+            {
+                PaymentSuccessOrderHeaderStatusChange(orderHeader);
+                RemoveShoppingCartAfterPayment(orderHeader.ApplicationUserId);
+
+                TempData["success"] = "Payment successfull";
+
+                return View("OrderConfirmation", id);
+            }
+            else
+            {
+                TempData["error"] = "Payment failed. Please try again.";
+                id = id + " ~ " + checkoutForm.ErrorMessage;
+
+                return View("OrderPaymentFail", id);
+            }
+        }
         public IActionResult Plus(int? id)
         {
             ShoppingCart cartItem = _unitOfWork.ShoppingCart.Get(u=>u.Id == id);
@@ -186,7 +239,6 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
             }
 
         }
-
         public IActionResult Delete(int? id)
         {
             ShoppingCart? obj = _unitOfWork.ShoppingCart.Get(u => u.Id == id);
@@ -218,5 +270,84 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
 
             return shoppingCart.Product.Price;
         }
+
+        private Iyzipay.Options IyzicoOptionsSet()
+        {
+            Iyzipay.Options options = new Iyzipay.Options();
+            options.ApiKey = _iyzicoSettings.Value.ApiKey; //"sandbox-cbD9qj9t72r54rwH0qbF806hf8IcVwi0";
+            options.SecretKey = _iyzicoSettings.Value.SecretKey; //"sandbox-AmLjKAT79fRq47avXlcphMt0byhSgvlk";
+            options.BaseUrl = _iyzicoSettings.Value.BaseUrl; //"https://sandbox-api.iyzipay.com";
+
+            return options;
+        }
+        private CreateCheckoutFormInitializeRequest IyzicoPaymentSet(ShoppingCartVM shoppingCartVM)
+        {
+            CreateCheckoutFormInitializeRequest request = new CreateCheckoutFormInitializeRequest();
+            request.Locale = Locale.TR.ToString();
+            request.ConversationId = Guid.NewGuid().ToString();
+            request.Price = shoppingCartVM.OrderHeader.OrderTotal.ToString();
+            request.PaidPrice = shoppingCartVM.OrderHeader.OrderTotal.ToString();
+            request.Currency = Currency.TRY.ToString();
+            request.PaymentGroup = PaymentGroup.PRODUCT.ToString();
+            request.CallbackUrl = "https://localhost:7174/Customer/Cart/OrderConfirmation/" + shoppingCartVM.OrderHeader.Id;
+
+            request.Buyer = new Buyer();
+            request.Buyer.Id = shoppingCartVM.OrderHeader.ApplicationUserId;
+            request.Buyer.Name = shoppingCartVM.OrderHeader.Name.Split(' ')[0];
+            request.Buyer.Surname = shoppingCartVM.OrderHeader.Name; //Surname şimdilik yok
+            request.Buyer.Email = shoppingCartVM.OrderHeader.ApplicationUser.Email;
+            request.Buyer.IdentityNumber = "1231231"; //identity number yok
+            request.Buyer.RegistrationAddress = shoppingCartVM.OrderHeader.StreetAddress;
+            request.Buyer.City = shoppingCartVM.OrderHeader.City;
+            request.Buyer.Country = shoppingCartVM.OrderHeader.State;
+
+            request.BillingAddress = new Address
+            {
+                ContactName = shoppingCartVM.OrderHeader.Name,
+                City = shoppingCartVM.OrderHeader.City,
+                Country = shoppingCartVM.OrderHeader.State,
+                Description = shoppingCartVM.OrderHeader.StreetAddress
+            };
+            request.ShippingAddress = new Address
+            {
+                ContactName = shoppingCartVM.OrderHeader.Name,
+                City = shoppingCartVM.OrderHeader.City,
+                Country = shoppingCartVM.OrderHeader.State,
+                Description = shoppingCartVM.OrderHeader.StreetAddress
+            };
+
+            request.BasketId = shoppingCartVM.OrderHeader.Id.ToString();
+            request.BasketItems = new List<BasketItem>();
+            foreach (var cartItem in shoppingCartVM.ShoppingCartList)
+            {
+                request.BasketItems.Add(new BasketItem
+                {
+                    Id = cartItem.ProductId.ToString(),
+                    Name = cartItem.Product.Title,
+                    Category1 = "Book",
+                    ItemType = BasketItemType.PHYSICAL.ToString(),
+                    Price = cartItem.Price * cartItem.Count + ".00", // Sonuna .00 eklemek şart. Miktar belirtilmediği için toplamla uyuşması açısından basketitem'ın sayısıyla çarpılır
+                });
+            };
+
+            return request;
+        }
+
+        private void RemoveShoppingCartAfterPayment(string userId)
+        {
+            var shoppingCartList = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId);
+            _unitOfWork.ShoppingCart.RemoveRange(shoppingCartList);
+            _unitOfWork.Save();
+        }
+        private void PaymentSuccessOrderHeaderStatusChange(OrderHeader orderHeader)
+        {
+                orderHeader.PaymentStatus = SD.PaymentStatusApproved;
+                orderHeader.OrderStatus = SD.StatusApproved;
+                orderHeader.PaymentDate = DateTime.Now;
+                _unitOfWork.OrderHeader.Update(orderHeader);
+                _unitOfWork.Save();
+        }
+        //TO DO: Arrange Payment and Order status information better via repository update methods
+        //TO DO: Add a method to handle token expiration date check and populate status and errormessage in checkform
     }
 }

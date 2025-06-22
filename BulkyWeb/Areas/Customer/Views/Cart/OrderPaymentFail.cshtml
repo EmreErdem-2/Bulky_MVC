@@ -1,0 +1,14 @@
+﻿@model string
+
+<div class="container row pt-4">
+	<div class="col-12 text-center">
+		<h1 class="text-primary text-center">Order Failed!</h1>
+		Your Order Number is: <strong>@Model.Split('~')[0].Trim();</strong><br></<br />
+	</div>
+	<div class="col-12 text-center" style="color:maroon">
+		<br />
+		Your payment failed! <br />
+		Error: @Model.Split('~')[1].Trim()<br />
+		<img src="~/images/failed_cross.jpg" width="45%" />
+	</div>
+</div>
