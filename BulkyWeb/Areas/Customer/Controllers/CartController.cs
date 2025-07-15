@@ -167,7 +167,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
             CheckoutFormInitialize checkoutFormResponse = 
                 await CheckoutFormInitialize.Create(checkoutVM.CheckoutFormRequest, checkoutVM.Options);
 
-            ShoppingCartVM.OrderHeader.PaymentIntentId = checkoutVM.CheckoutFormRequest.ConversationId;
+            ShoppingCartVM.OrderHeader.ConversationId = checkoutVM.CheckoutFormRequest.ConversationId;
             ShoppingCartVM.OrderHeader.Token = checkoutFormResponse.Token;
             ShoppingCartVM.OrderHeader.TokenExpireTime = checkoutFormResponse.TokenExpireTime;
             _unitOfWork.OrderHeader.Update(ShoppingCartVM.OrderHeader);
@@ -187,7 +187,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
             RetrieveCheckoutFormRequest request = new RetrieveCheckoutFormRequest
             {
                 Locale = Locale.TR.ToString(),
-                ConversationId = orderHeader.PaymentIntentId,
+                ConversationId = orderHeader.ConversationId,
                 Token = storedToken
             };
 
@@ -195,6 +195,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
 
             if (checkoutForm.PaymentStatus == "SUCCESS" && token == storedToken)
             {
+                orderHeader.PaymentId = checkoutForm.PaymentId;
                 PaymentSuccessOrderHeaderStatusChange(orderHeader);
                 RemoveShoppingCartAfterPayment(orderHeader.ApplicationUserId);
 

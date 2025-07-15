@@ -27,7 +27,8 @@ namespace BulkyBook.Models
         public DateTime PaymentDate { get; set; }
         public DateOnly PaymentDueDate { get; set; }
 
-        public string? PaymentIntentId { get; set; }
+        public string? ConversationId { get; set; }
+        public string? PaymentId { get; set; }
         public string? Token { get; set; }
         public long? TokenExpireTime { get; set; }
 
