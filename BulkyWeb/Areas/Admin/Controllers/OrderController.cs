@@ -114,8 +114,8 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
                 var cancelRequest = new CreateCancelRequest
                 {
                     ConversationId = orderHeader.ConversationId,
-                    PaymentId = orderHeader.Id.ToString(),
-                    Reason = "Cancelled by Admin",
+                    PaymentId = orderHeader.PaymentId,
+                    Reason = "other",
                     Description = "Order cancelled by admin",
                     Ip = _iyzicoSettings.Value.BaseUrl,
                     Locale = Iyzipay.Model.Locale.TR.ToString()

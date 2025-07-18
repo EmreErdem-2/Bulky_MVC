@@ -156,13 +156,13 @@
                             @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
                             {
                                 <div class="row my-1">
-                                    <div class="col-3">Session ID</div>
+                                    <div class="col-3">Conversation ID</div>
                                     <div class="col-9">
                                         <input asp-for="OrderHeader.ConversationId" readonly type="text" class="form-control" />
                                     </div>
                                 </div>
                                 <div class="row my-1">
-                                    <div class="col-3">Payment Intent ID</div>
+                                    <div class="col-3">Payment ID</div>
                                     <div class="col-9">
                                         <input asp-for="OrderHeader.PaymentId" readonly type="text" class="form-control" />
                                     </div>
