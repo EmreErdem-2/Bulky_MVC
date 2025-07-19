@@ -223,8 +223,9 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
         public IActionResult Minus(int? id)
         {
             ShoppingCart cartItem = _unitOfWork.ShoppingCart.Get(u => u.Id == id);
-            if(cartItem.Count == 1) { 
+            if(cartItem.Count == 1) {
                 // If the count is 1, we should remove the item from the cart instead of decrementing
+                HttpContext.Session.SetInt32(SD.SessionCart, _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == cartItem.ApplicationUserId).Count() - 1);
                 _unitOfWork.ShoppingCart.Remove(cartItem);
                 _unitOfWork.Save();
 
@@ -247,6 +248,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
             {
                 return NotFound();
             }
+            HttpContext.Session.SetInt32(SD.SessionCart, _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == obj.ApplicationUserId).Count());
             _unitOfWork.ShoppingCart.Remove(obj);
             _unitOfWork.Save();
             TempData["success"] = "Cart item deleted successfully";
