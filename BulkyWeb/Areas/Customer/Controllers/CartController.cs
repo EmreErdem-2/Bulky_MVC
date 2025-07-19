@@ -200,6 +200,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
                 RemoveShoppingCartAfterPayment(orderHeader.ApplicationUserId);
 
                 TempData["success"] = "Payment successfull";
+                HttpContext.Session.Clear();
 
                 return View("OrderConfirmation", id);
             }
