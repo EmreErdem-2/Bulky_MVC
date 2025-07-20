@@ -293,7 +293,7 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
             request.PaidPrice = shoppingCartVM.OrderHeader.OrderTotal.ToString();
             request.Currency = Currency.TRY.ToString();
             request.PaymentGroup = PaymentGroup.PRODUCT.ToString();
-            request.CallbackUrl = Request.Scheme+"://"+Request.Host.Value+"/"+shoppingCartVM.OrderHeader.Id;
+            request.CallbackUrl = Request.Scheme+"://"+Request.Host.Value+"/Customer/Cart/OrderConfirmation/"+shoppingCartVM.OrderHeader.Id+"/";
 
             request.Buyer = new Buyer();
             request.Buyer.Id = shoppingCartVM.OrderHeader.ApplicationUserId;
