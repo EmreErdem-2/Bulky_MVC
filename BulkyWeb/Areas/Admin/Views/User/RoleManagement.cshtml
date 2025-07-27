@@ -1,0 +1,70 @@
+﻿@model RoleManagementVM
+
+<div class="card shadow border-0 mt-4">
+    <div class="card-header bg-secondary bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">Edit User Role</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form method="post" class="row">
+            <input asp-for="@Model.User.Id" hidden />
+            <div class="border p-3 mt-4">
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="@Model.User.Name" class="form-control border-0 shadow" disabled />
+                    <label asp-for="@Model.User.Name" class="ms-2"></label>
+                    <span asp-validation-for="@Model.User.Name" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="@Model.User.Email" class="form-control border-0 shadow" disabled />
+                    <label asp-for="@Model.User.Email" class="ms-2"></label>
+                    <span asp-validation-for="@Model.User.Email" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <select asp-for="@Model.User.Role" asp-items="@Model.RoleList" class="form-select text-center text-muted" id="roleList" onchange="toggleCompanyDropdown()">
+                        @Model.User.Role
+                    </select>
+                </div>
+                <div id="companyDropdown" class="form-floating py-2 col-12" style="display:none;">
+                        <select asp-for="@Model.User.Company.Id" asp-items="@Model.CompanyList" class="form-select text-center text-muted">
+                            <option disabled selected>-Select Company-</option>
+                        </select>
+                    </div>
+                <div class="row mt-3">
+                    <div class="col-6 col-md-3">
+                        <button type="submit" class="btn btn-primary form-control">Update</button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a asp-controller="User" asp-action="Index" class="btn btn-secondary border form-control">Back to the List</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+    function toggleCompanyDropdown() {
+        var companySelect = document.getElementById('User_Company_Id');
+
+        var selectedRole = document.getElementById('roleList').value;
+        var companyDropdown = document.getElementById('companyDropdown');
+        if (selectedRole === 'Company') {
+            companyDropdown.style.display = 'block'; // Show the dropdown
+        } else {
+            companyDropdown.style.display = 'none'; // Hide the dropdown
+            companySelect.value = null;
+        }
+    }
+
+    window.onload = toggleCompanyDropdown;
+</script>
+
+@section Scripts {
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
+}
