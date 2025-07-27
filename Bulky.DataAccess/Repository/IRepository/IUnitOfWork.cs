@@ -11,11 +11,11 @@ namespace BulkyBook.DataAccess.Repository.IRepository
         ICategoryRepository Category { get; }
         IProductRepository Product { get; }
         IProductImageRepository ProductImage { get; }
-        ICompanyRepository Company { get; set; }
-        IShoppingCartRepository ShoppingCart { get; set; }
-        IApplicationUserRepository ApplicationUser { get; set; }
-        IOrderHeaderRepository OrderHeader { get; set; }
-        IOrderDetailRepository OrderDetail { get; set; }
+        ICompanyRepository Company { get; }
+        IShoppingCartRepository ShoppingCart { get; }
+        IApplicationUserRepository ApplicationUser { get; }
+        IOrderHeaderRepository OrderHeader { get; }
+        IOrderDetailRepository OrderDetail { get; }
         void Save();
     }
 }
