@@ -43,10 +43,13 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
                     ApplicationUserId = userId
                 }
             };
-            if(shoppingCartVM.ShoppingCartList.Count() > 0)
+
+            IEnumerable<ProductImage> productImages = _unitOfWork.ProductImage.GetAll();
+            if (shoppingCartVM.ShoppingCartList.Count() > 0)
             {
                 foreach(var cartItem in shoppingCartVM.ShoppingCartList)
                 {
+                    cartItem.Product.ProductImages = productImages.Where(u=>u.ProductId==cartItem.ProductId).ToList();
                     cartItem.Price = GetPriceBasedOnQuantity(cartItem);
                     shoppingCartVM.OrderHeader.OrderTotal = shoppingCartVM.OrderHeader.OrderTotal + cartItem.Count * cartItem.Price;
                 }
