@@ -10,6 +10,7 @@ namespace BulkyBook.DataAccess.Repository.IRepository
     {
         ICategoryRepository Category { get; }
         IProductRepository Product { get; }
+        IProductImageRepository ProductImage { get; }
         ICompanyRepository Company { get; set; }
         IShoppingCartRepository ShoppingCart { get; set; }
         IApplicationUserRepository ApplicationUser { get; set; }
